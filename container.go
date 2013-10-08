@@ -99,7 +99,10 @@ type BindMap struct {
 }
 
 var (
-	ErrInvaidWorikingDirectory = errors.New("The working directory is invalid. It needs to be an absolute path.")
+	ErrInvalidWorikingDirectory = errors.New("The working directory is invalid. It needs to be an absolute path.")
+	ErrConflictTtySigProxy      = errors.New("TTY mode (-t) already imply signal proxying (-sig-proxy)")
+	ErrConflictAttachDetach     = errors.New("Conflicting options: -a and -d")
+	ErrConflictDetachAutoRemove = errors.New("Conflicting options: -rm and -d")
 )
 
 type KeyValuePair struct {
@@ -127,6 +130,7 @@ func ParseRun(args []string, capabilities *Capabilities) (*Config, *HostConfig, 
 	flNetwork := cmd.Bool("n", true, "Enable networking for this container")
 	flPrivileged := cmd.Bool("privileged", false, "Give extended privileges to this container")
 	flAutoRemove := cmd.Bool("rm", false, "Automatically remove the container when it exits (incompatible with -d)")
+	flSigProxy := cmd.Bool("sig-proxy", false, "Proxify all received signal to the process (even in non-tty mode)")
 
 	if capabilities != nil && *flMemory > 0 && !capabilities.MemoryLimit {
 		//fmt.Fprintf(stdout, "WARNING: Your kernel does not support memory limit capabilities. Limitation discarded.\n")
@@ -159,11 +163,18 @@ func ParseRun(args []string, capabilities *Capabilities) (*Config, *HostConfig, 
 		return nil, nil, cmd, err
 	}
 	if *flDetach && len(flAttach) > 0 {
-		return nil, nil, cmd, fmt.Errorf("Conflicting options: -a and -d")
+		return nil, nil, cmd, ErrConflictAttachDetach
 	}
 	if *flWorkingDir != "" && !path.IsAbs(*flWorkingDir) {
-		return nil, nil, cmd, ErrInvaidWorikingDirectory
+		return nil, nil, cmd, ErrInvalidWorikingDirectory
 	}
+	if *flTty && *flSigProxy {
+		return nil, nil, cmd, ErrConflictTtySigProxy
+	}
+	if *flDetach && *flAutoRemove {
+		return nil, nil, cmd, ErrConflictDetachAutoRemove
+	}
+
 	// If neither -d or -a are set, attach to everything by default
 	if len(flAttach) == 0 && !*flDetach {
 		if !*flDetach {
@@ -173,10 +184,6 @@ func ParseRun(args []string, capabilities *Capabilities) (*Config, *HostConfig, 
 				flAttach.Set("stdin")
 			}
 		}
-	}
-
-	if *flDetach && *flAutoRemove {
-		return nil, nil, cmd, fmt.Errorf("Conflicting options: -rm and -d")
 	}
 
 	var binds []string
