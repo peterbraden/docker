@@ -165,7 +165,7 @@ func TestCreateStartRestartStopStartKillRm(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := srv.ContainerKill(id, 9); err != nil {
+	if err := srv.ContainerKill(id, 0); err != nil {
 		t.Fatal(err)
 	}
 

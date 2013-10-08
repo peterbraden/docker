@@ -1024,51 +1024,54 @@ func (container *Container) monitor(hostConfig *HostConfig) {
 }
 
 func (container *Container) kill(sig int) error {
+	container.State.Lock()
+	defer container.State.Unlock()
+
 	if !container.State.Running {
 		return nil
 	}
 
-	// Sending SIGKILL to the process via lxc
-	output, err := exec.Command("lxc-kill", "-n", container.ID, strconv.Itoa(sig)).CombinedOutput()
-	if err != nil {
-		log.Printf("error killing container %s (%s, %s)", container.ID, output, err)
+	if output, err := exec.Command("lxc-kill", "-n", container.ID, strconv.Itoa(sig)).CombinedOutput(); err != nil {
+		log.Printf("error killing container %s (%s, %s)", container.ShortID(), output, err)
+		return err
+	}
+
+	return nil
+}
+
+func (container *Container) Kill() error {
+	if !container.State.Running {
+		return nil
+	}
+
+	// 1. Send SIGKILL
+	if err := container.kill(9); err != nil {
+		return err
 	}
 
 	// 2. Wait for the process to die, in last resort, try to kill the process directly
 	if err := container.WaitTimeout(10 * time.Second); err != nil {
 		if container.cmd == nil {
-			return fmt.Errorf("lxc-kill failed, impossible to kill the container %s", container.ID)
+			return fmt.Errorf("lxc-kill failed, impossible to kill the container %s", container.ShortID())
 		}
-		log.Printf("Container %s failed to exit within 10 seconds of lxc-kill %d  - trying direct SIGKILL", sig, container.ID)
+		log.Printf("Container %s failed to exit within 10 seconds of lxc-kill %s - trying direct SIGKILL", "SIGKILL", container.ShortID())
 		if err := container.cmd.Process.Kill(); err != nil {
 			return err
 		}
 	}
 
-	// Wait for the container to be actually stopped
 	container.Wait()
 	return nil
 }
 
-func (container *Container) Kill(sig int) error {
-	container.State.Lock()
-	defer container.State.Unlock()
-	if !container.State.Running {
-		return nil
-	}
-	return container.kill(sig)
-}
-
 func (container *Container) Stop(seconds int) error {
-	container.State.Lock()
-	defer container.State.Unlock()
 	if !container.State.Running {
 		return nil
 	}
 
 	// 1. Send a SIGTERM
-	if output, err := exec.Command("lxc-kill", "-n", container.ID, "15").CombinedOutput(); err != nil {
-		log.Print(string(output))
+	if err := container.kill(15); err != nil {
+		utils.Debugf("Error sending kill SIGTERM: %s", err)
 		log.Print("Failed to send SIGTERM to the process, force killing")
 		if err := container.kill(9); err != nil {
 			return err
@@ -1078,7 +1081,8 @@ func (container *Container) Stop(seconds int) error {
 	// 2. Wait for the process to exit on its own
 	if err := container.WaitTimeout(time.Duration(seconds) * time.Second); err != nil {
 		log.Printf("Container %v failed to exit within %d seconds of SIGTERM - using the force", container.ID, seconds)
-		if err := container.kill(9); err != nil {
+		// 3. If it doesn't, then send SIGKILL
+		if err := container.Kill(); err != nil {
 			return err
 		}
 	}

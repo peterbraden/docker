@@ -140,7 +140,7 @@ func postContainersKill(srv *Server, version float64, w http.ResponseWriter, r *
 	}
 	name := vars["name"]
 
-	signal := 9
+	signal := 0
 	if r != nil {
 		s := r.Form.Get("signal")
 		if s != "" {

@@ -748,7 +748,7 @@ func TestPostContainersRestart(t *testing.T) {
 		t.Fatalf("Container should be running")
 	}
 
-	if err := container.Kill(9); err != nil {
+	if err := container.Kill(); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -798,7 +798,7 @@ func TestPostContainersStart(t *testing.T) {
 		t.Fatalf("A running container should be able to be started")
 	}
 
-	if err := container.Kill(9); err != nil {
+	if err := container.Kill(); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -922,7 +922,7 @@ func TestPostContainersAttach(t *testing.T) {
 	// Try to avoid the timeout in destroy. Best effort, don't check error
 	defer func() {
 		closeWrap(stdin, stdinPipe, stdout, stdoutPipe)
-		container.Kill(9)
+		container.Kill()
 	}()
 
 	// Attach to it
@@ -1011,7 +1011,7 @@ func TestPostContainersAttachStderr(t *testing.T) {
 	// Try to avoid the timeout in destroy. Best effort, don't check error
 	defer func() {
 		closeWrap(stdin, stdinPipe, stdout, stdoutPipe)
-		container.Kill(9)
+		container.Kill()
 	}()
 
 	// Attach to it

@@ -393,7 +393,7 @@ func TestRunDetach(t *testing.T) {
 	container := globalRuntime.List()[0]
 
 	setTimeout(t, "Escape sequence timeout", 5*time.Second, func() {
-		stdinPipe.Write([]byte{'', ''})
+		stdinPipe.Write([]byte{16, 17})
 		if err := stdinPipe.Close(); err != nil {
 			t.Fatal(err)
 		}
@@ -410,8 +410,7 @@ func TestRunDetach(t *testing.T) {
 	}
 
 	setTimeout(t, "Waiting for container to die timed out", 20*time.Second, func() {
-		container.Kill(9)
-		container.Wait()
+		container.Kill()
 	})
 }
 
@@ -451,7 +450,7 @@ func TestAttachDetach(t *testing.T) {
 	})
 
 	setTimeout(t, "Escape sequence timeout", 5*time.Second, func() {
-		stdinPipe.Write([]byte{'', ''})
+		stdinPipe.Write([]byte{16, 17})
 		if err := stdinPipe.Close(); err != nil {
 			t.Fatal(err)
 		}
@@ -468,8 +467,7 @@ func TestAttachDetach(t *testing.T) {
 	}
 
 	setTimeout(t, "Waiting for container to die timedout", 5*time.Second, func() {
-		container.Kill(9)
-		container.Wait()
+		container.Kill()
 	})
 }
 
