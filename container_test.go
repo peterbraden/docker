@@ -445,7 +445,7 @@ func TestKillDifferentUser(t *testing.T) {
 		}
 	})
 
-	if err := container.Kill(); err != nil {
+	if err := container.Kill(9); err != nil {
 		t.Fatal(err)
 	}
 
@@ -457,7 +457,7 @@ func TestKillDifferentUser(t *testing.T) {
 		t.Errorf("Container shouldn't be running")
 	}
 	// Try stopping twice
-	if err := container.Kill(); err != nil {
+	if err := container.Kill(9); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -510,7 +510,7 @@ func TestKill(t *testing.T) {
 	if !container.State.Running {
 		t.Errorf("Container should be running")
 	}
-	if err := container.Kill(); err != nil {
+	if err := container.Kill(9); err != nil {
 		t.Fatal(err)
 	}
 	if container.State.Running {
@@ -521,7 +521,7 @@ func TestKill(t *testing.T) {
 		t.Errorf("Container shouldn't be running")
 	}
 	// Try stopping twice
-	if err := container.Kill(); err != nil {
+	if err := container.Kill(9); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -835,11 +835,11 @@ func TestMultipleContainers(t *testing.T) {
 	}
 
 	// Kill them
-	if err := container1.Kill(); err != nil {
+	if err := container1.Kill(9); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := container2.Kill(); err != nil {
+	if err := container2.Kill(9); err != nil {
 		t.Fatal(err)
 	}
 }

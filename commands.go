@@ -601,7 +601,7 @@ func (cli *DockerCli) CmdStart(args ...string) error {
 		v.Set("stderr", "1")
 
 		cErr = utils.Go(func() error {
-			return cli.hijack("POST", "/containers/"+cmd.Arg(0)+"/attach?"+v.Encode(), container.Config.Tty, cli.in, cli.out)
+			return cli.hijack("POST", "/containers/"+cmd.Arg(0)+"/attach?"+v.Encode(), container.Config.Tty, cli.in, cli.out, cli.err)
 		})
 	}
 

@@ -410,7 +410,7 @@ func TestRunDetach(t *testing.T) {
 	}
 
 	setTimeout(t, "Waiting for container to die timed out", 20*time.Second, func() {
-		container.Kill()
+		container.Kill(9)
 		container.Wait()
 	})
 }
@@ -468,7 +468,7 @@ func TestAttachDetach(t *testing.T) {
 	}
 
 	setTimeout(t, "Waiting for container to die timedout", 5*time.Second, func() {
-		container.Kill()
+		container.Kill(9)
 		container.Wait()
 	})
 }

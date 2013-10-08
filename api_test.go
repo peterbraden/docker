@@ -321,6 +321,8 @@ func TestGetContainersJSON(t *testing.T) {
 
 	srv := &Server{runtime: runtime}
 
+	beginLen := runtime.containers.Len()
+
 	container, err := runtime.Create(&Config{
 		Image: GetTestImage(runtime).ID,
 		Cmd:   []string{"echo", "test"},
@@ -344,7 +346,7 @@ func TestGetContainersJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(containers) != 1 {
-		t.Fatalf("Expected %d container, %d found", 1, len(containers))
+		t.Fatalf("Expected %d container, %d found (started with: %d)", 1, len(containers), beginLen)
 	}
 	if containers[0].ID != container.ID {
 		t.Fatalf("Container ID mismatch. Expected: %s, received: %s\n", container.ID, containers[0].ID)
@@ -746,7 +748,7 @@ func TestPostContainersRestart(t *testing.T) {
 		t.Fatalf("Container should be running")
 	}
 
-	if err := container.Kill(); err != nil {
+	if err := container.Kill(9); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -796,7 +798,7 @@ func TestPostContainersStart(t *testing.T) {
 		t.Fatalf("A running container should be able to be started")
 	}
 
-	if err := container.Kill(); err != nil {
+	if err := container.Kill(9); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -920,7 +922,7 @@ func TestPostContainersAttach(t *testing.T) {
 	// Try to avoid the timeout in destroy. Best effort, don't check error
 	defer func() {
 		closeWrap(stdin, stdinPipe, stdout, stdoutPipe)
-		container.Kill()
+		container.Kill(9)
 	}()
 
 	// Attach to it
@@ -1009,7 +1011,7 @@ func TestPostContainersAttachStderr(t *testing.T) {
 	// Try to avoid the timeout in destroy. Best effort, don't check error
 	defer func() {
 		closeWrap(stdin, stdinPipe, stdout, stdoutPipe)
-		container.Kill()
+		container.Kill(9)
 	}()
 
 	// Attach to it

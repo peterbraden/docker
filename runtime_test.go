@@ -37,7 +37,7 @@ func nuke(runtime *Runtime) error {
 	for _, container := range runtime.List() {
 		wg.Add(1)
 		go func(c *Container) {
-			c.Kill()
+			c.Kill(9)
 			wg.Done()
 		}(container)
 	}
@@ -47,7 +47,7 @@ func nuke(runtime *Runtime) error {
 
 func cleanup(runtime *Runtime) error {
 	for _, container := range runtime.List() {
-		container.Kill()
+		container.Kill(9)
 		runtime.Destroy(container)
 	}
 	images, err := runtime.graph.Map()
@@ -332,7 +332,7 @@ func startEchoServerContainer(t *testing.T, proto string) (*Runtime, *Container,
 func TestAllocateTCPPortLocalhost(t *testing.T) {
 	runtime, container, port := startEchoServerContainer(t, "tcp")
 	defer nuke(runtime)
-	defer container.Kill()
+	defer container.Kill(9)
 
 	for i := 0; i != 10; i++ {
 		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%v", port))
@@ -381,7 +381,7 @@ func TestAllocateTCPPortLocalhost(t *testing.T) {
 func TestAllocateUDPPortLocalhost(t *testing.T) {
 	runtime, container, port := startEchoServerContainer(t, "udp")
 	defer nuke(runtime)
-	defer container.Kill()
+	defer container.Kill(9)
 
 	conn, err := net.Dial("udp", fmt.Sprintf("localhost:%v", port))
 	if err != nil {
