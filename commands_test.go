@@ -6,6 +6,7 @@ import (
 	"github.com/dotcloud/docker/utils"
 	"io"
 	"io/ioutil"
+	"path"
 	"strings"
 	"testing"
 	"time"
@@ -578,4 +579,116 @@ func TestRunAutoRemove(t *testing.T) {
 	if len(globalRuntime.List()) > 0 {
 		t.Fatalf("failed to remove container automatically: container %s still exists", temporaryContainerID)
 	}
+}
+
+// A testContextTemplate describes a build context and how to test it
+type testBuildContextTemplate struct {
+	// files in the context, eg [][2]string{{"Dockerfile", "FROM {IMAGE}"}, {"./passwd", "gordon"}}
+	files [][2]string
+	// command output lines expected that we will test for (if there are more, we ignore them
+	cmdOutput []string
+	// the list of command options to be sent to cmdBuild
+	buildCmdOptions []string
+}
+
+// A table of all the contexts to build and test.
+// A new docker runtime will be created and torn down for each context.
+var testBuildContexts = []testBuildContextTemplate{
+	{
+		[][2]string{{"Dockerfile", `
+FROM   {IMAGE}
+RUN    pwd
+`}},
+		[]string{
+			"Step 1 : FROM ", //83599e29c455eb719f77d799bc7c51521b9551972f5a850d7ad265bc1b5292f6",
+			" ---> ",         //83599e29c455",
+			"Step 2 : RUN pwd",
+			" ---> Running in ", //670cacbd9f6c",
+			"/",
+			" ---> ",              //364446ad8316",
+			"Successfully built ", //38d2752ee668",
+		},
+		[]string{"{TMPDIR}"},
+	},
+	{
+		[][2]string{{"Dockerfile", `
+FROM   {IMAGE}
+ADD    password /
+RUN    ls | grep p
+`},
+			{
+				"password", `
+george:george
+`}},
+		[]string{
+			"Step 1 : FROM ", //83599e29c455eb719f77d799bc7c51521b9551972f5a850d7ad265bc1b5292f6",
+			" ---> ",         //83599e29c455",
+			"Step 2 : ADD password /",
+			" ---> ", //670cacbd9f6c",
+			"Step 3 : RUN ls | grep p",
+			" ---> Running in ", //670cacbd9f6c",
+			"password",
+			" ---> ",              //364446ad8316",
+			"Successfully built ", //38d2752ee668",
+		},
+		[]string{"{TMPDIR}"},
+	},
+}
+
+// TestSimpleBuild checks that 'docker build /tmp/randome-test-dir' builds a container
+func TestBuildCommandLine(t *testing.T) {
+	stdout, stdoutPipe := io.Pipe()
+
+	for _, ctx := range testBuildContexts {
+		tmpDir, err := ioutil.TempDir("", "docker-test")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		replacer := strings.NewReplacer("{IMAGE}", unitTestImageID, "{TMPDIR}", tmpDir)
+		//write all the files - TODO: what about subdirs?
+		for _, file := range ctx.files {
+			fileName, contents := file[0], file[1]
+			filePath := path.Join(tmpDir, fileName)
+			writeErr := ioutil.WriteFile(filePath, []byte(replacer.Replace(contents)), 0644)
+			if writeErr != nil {
+				t.Fatal(writeErr)
+			}
+		}
+		for index, value := range ctx.buildCmdOptions {
+			ctx.buildCmdOptions[index] = replacer.Replace(value)
+		}
+
+		cli := NewDockerCli(nil, stdoutPipe, ioutil.Discard, testDaemonProto, testDaemonAddr)
+		defer cleanup(globalRuntime)
+
+		c := make(chan struct{})
+		go func() {
+			defer close(c)
+			if err := cli.CmdBuild(ctx.buildCmdOptions...); err != nil {
+				t.Fatal(err)
+			}
+		}()
+
+		setTimeout(t, "Reading command output time out", 5*time.Second, func() {
+			//TODO: not sure if the replacer should be run on this too - probably
+			for index, value := range ctx.cmdOutput {
+				cmdOutput, err := bufio.NewReader(stdout).ReadString('\n')
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !strings.HasPrefix(cmdOutput, value) {
+					t.Fatalf("LINE%d EXPECTED:'%s'\n GOT: '%s'\n", index, value, cmdOutput)
+				} else {
+					t.Logf("LINE%d GOT: '%s'\n", index, cmdOutput)
+				}
+			}
+			//ignore any other strings
+		})
+
+		setTimeout(t, "CmdRun timed out", 4*time.Second, func() {
+			<-c
+		})
+	}
+
 }
