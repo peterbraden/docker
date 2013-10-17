@@ -194,8 +194,8 @@ func (cli *DockerCli) CmdBuild(args ...string) error {
 			return err
 		}
 		context, err = mkBuildContext(string(dockerfile), nil)
-	} else if len(dockerfile) > 0 {
-		dockerfilecontent, err := os.Open(dockerfile)
+	} else if len(*dockerfile) > 0 {
+		dockerfilecontent, err := ioutil.ReadFile(*dockerfile)
 		if err != nil {
 			return err
 		}
