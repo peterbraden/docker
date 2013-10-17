@@ -170,6 +170,7 @@ func (cli *DockerCli) CmdBuild(args ...string) error {
 	tag := cmd.String("t", "", "Repository name (and optionally a tag) to be applied to the resulting image in case of success")
 	suppressOutput := cmd.Bool("q", false, "Suppress verbose build output")
 	noCache := cmd.Bool("no-cache", false, "Do not use cache when building the image")
+	dockerfile := cmd.String("f", "", "Dockerfile to use - defaults to ./Dockerfile")
 	rm := cmd.Bool("rm", false, "Remove intermediate containers after a successful build")
 	if err := cmd.Parse(args); err != nil {
 		return nil
@@ -193,6 +194,13 @@ func (cli *DockerCli) CmdBuild(args ...string) error {
 			return err
 		}
 		context, err = mkBuildContext(string(dockerfile), nil)
+	} else if len(dockerfile) > 0 {
+		dockerfilecontent, err := os.Open(dockerfile)
+		if err != nil {
+			return err
+		}
+		context, err = mkBuildContext(string(dockerfilecontent), nil)
+
 	} else if utils.IsURL(cmd.Arg(0)) || utils.IsGIT(cmd.Arg(0)) {
 		isRemote = true
 	} else {
