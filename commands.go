@@ -199,7 +199,24 @@ func (cli *DockerCli) CmdBuild(args ...string) error {
 		if err != nil {
 			return err
 		}
-		context, err = mkBuildContext(string(dockerfilecontent), nil)
+		
+		files, err := ioutil.ReadDir(cmd.Arg(0))
+		
+		if err != nil {
+			return err
+		}
+		
+		var ft [][2]string
+		for i, file := range files {
+			ft[i][0] = file.Name()
+			tmp, err :=  ioutil.ReadFile(file.Name())
+			if err != nil {
+				return err
+			}
+			ft[i][1] = string(tmp)
+		}
+			
+		context, err = mkBuildContext(string(dockerfilecontent), ft)
 
 	} else if utils.IsURL(cmd.Arg(0)) || utils.IsGIT(cmd.Arg(0)) {
 		isRemote = true
